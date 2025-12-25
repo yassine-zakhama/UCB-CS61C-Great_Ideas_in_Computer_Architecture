@@ -19,3 +19,5 @@ BraceWrapping:
   AfterControlStatement: false
   AfterFunction: false
   BeforeElse: false
+
+KeepEmptyLinesAtTheStartOfBlocks: false
