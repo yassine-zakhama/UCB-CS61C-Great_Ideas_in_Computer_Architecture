@@ -1,0 +1,48 @@
+0 is not a positive number
+
+Where did the word "Bits" come from?
+	Binary Digits
+	Bi         ts
+
+	Binary Digit
+	Bi 		   t
+
+Transistors only know 2 states -> ON and OFF -> that is why computers use binary
+
+In C: if you add 0 to the front of a number (10 -> 010), C will interpret it as octal based (base 8)
+
+- Negative Numbers?
+	Attempt one: Sign magnitude: Left most bit as sign
+		-> not good because we have 2 zeros (if we have to check if a number is zero, we have to check if it's equal to 1000 and 0000). Also physics and other problems
+
+	Attempt two: One's complement (flip the bits)
+		-> better but still not that good (2 zeros: 0000 and 1111)
+
+	Attempt three: Two's complement (flip all bits and add one)
+		-> better got rid of the 2 zeros (negative numbers do not overlap with positive numbers anymore)
+		Although we do not interpret the left most bit as a sign magnitude, all negative numbers have 1 in the left most bit
+
+		How?
+			Variant 1: Left most bit is always interpreted negative
+				Example: 0b1101 = -2^3 + 2^2 + 0 + 2^1 = -3
+
+			Variant 2: Flip bits and add one
+				Example 0b1101 -> 0b0010 + 0b1 = 0b11 = 3
+
+		How many numbers?
+			2^(N-1) non-negatives
+			2^(N-1) negatives
+
+
+	None of the 3 attempts have all 0s being the smallest value (0000 is always 0)
+	-> Bias Encoding:
+			Takes all the values and take them down by some bias (0 becomes the middle number, the numbers are balanced across 0)
+
+			Example: N (# of bits) = 5 => unsigned values = 0 .. 31
+					 Take the values and add a bias = -2^(N-1) - 1 (here -15) on top of it
+			Now the smallest number is 0000 (-15)
+			The bias has to be stored a long the number
+
+	In practice: Unsigned, two's compliments and bias encoding are used
+	One reason sign magnitude and one's compliment are not used is that the hardware to build that would be very hardware
+	The same hardware is used to do mathematics on two's compliment and unsigned numbers (the only difference is overflow)
