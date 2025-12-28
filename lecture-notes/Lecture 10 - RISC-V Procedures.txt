@@ -1,0 +1,181 @@
+Reminder:
+    a0-a7 (x10-x17): 8 argument registers to pass parameters and two return values (a0-a1)
+    ra: one return address register to return to the point of origin (x1)
+    s0-s1 (x8-x9) and s2-s11(x18-x27): saved registers
+
+Where are old register values saved to restore them after function call?
+    Need a place to save old values before calling function, restore them when return, and delete
+    Ideal place in memory is stack
+    Some instruction languages have designated instructions for push and pop, RISC-V does not
+    Stack is in memory, so we need a register to point to it
+        -> "Stack Pointer" (SP)
+        sp is the stack pointer in RISC-V (x2)
+    Stack starts at end of memory and grows downwards
+        -> push decrements sp, pop increments sp
+
+Stack frame:
+    Each function has a set of data called stack frame
+
+    Stack frame includes:
+        Return "instruction" address
+        Parameters (arguments)
+        Space for other local variables
+
+    Stack frames: contiguous blocks of memory; stack pointer tells where bottom stack frame is
+
+    When procedure ends, stack frame is tossed off the stack; frees memory for future stack frames
+        Stack pointer is moved to previous stack frame end
+
+Example C:
+    int leaf(int g, int h, int i, int j) {
+        int f;
+        f = (g + h) - (i + j);
+        return f;
+    }
+
+Example RISC-V:
+    Leaf:   addi sp, sp, -8     # make room for 2 integers / adjust stack for 2 items | these 3 instructions are called "prologue"
+            sw s1, 4(sp)        # save s1 for use afterwards                          |     -> preparation of function call
+            sw s0, 0(sp)        # save s0 for use afterwards                          |
+
+            add s0, a0, a1      # g + h
+            add s1, a2, a3      # i + j
+            sub a0, s0, s1      # return value (g + h) - (i + j)
+
+            lw s0, 0(sp)        # restore register s0 for caller    | these 3 instructions are called "epilogue"
+            lw s1, 4(sp)        # restore register s1 for caller    |   -> wrap up function call
+            addi sp, sp, 8      # adjust stack to delete 2 items    |
+
+            jr ra               # jump back to calling routine
+
+Nested Calls and Register Conventions:
+    Example: recursive calls
+        Would clobber values in a0-a7 and ra
+        ra would be overwritten, and parent function would not know where its return address is
+
+    One straightforward solution is using the stack:
+        -> take all 31 registers and put them on the stack
+        but this is very inefficient/slow, memory operations are expensive and we rarely use all 31 registers
+
+    Solution: we rely on putting some of the registers on the stack during a nested call and having some of them being clobbered
+
+    When callee returns from executing, the caller needs to know which registers may have changed and which are guaranteed to be unchanged
+
+    Register Conventions: A set of generally accepted rules as to which registers will be unchanged after a procedure call (jal)
+    and which may be changed
+    To reduce expensive loads and stores from spilling and restoring register, RISC-V function-calling convention divides registers
+    into 2 categories:
+        1. Preserved across function call
+            Caller can rely on values being unchanged
+            sp, gp (global pointer), tp (thread pointer), saved registers s0-s11 (s0 is also fp (frame pointer))
+                gp, tp are generally managed by compiler / OS
+        2. Not preserved across function call
+            Caller cannot rely on values being unchanged
+            Argument / return registers a0-a7, ra, "temporary registers" t0-t6
+
+    Registers that have to be saved by the CALLER:
+        ra, t0-6, a0-7
+    Registers that have to be saved by the CALLEE:
+        sp, s0-11 (s0 is the frame pointer)
+
+Allocating Space on Stack:
+    C has 2 storage classes: automatic and static:
+        "Automatic" variables are local to function and discarded when function exits
+        "Static" variables exist across exits from and entries to procedures
+    Use stack for automatic (local) variables that don't fit in registers
+    "Procedure frame" or "activation record": segment of stack with saved registers and local variables
+
+    Stack before, during, after function
+
+        |               |           |               |            |               |
+   SP ->|---------------|           |---------------|       SP ->|---------------|
+        |               |           | Saved return  |            |               |
+        |               |           |    address    |            |               |
+                                    |  (if needed)  |
+                                    |---------------|
+                                    | Saved arg reg |
+                                    |  (if needed)  |
+                                    |---------------|
+                                    |  Saved saved  |
+                                    |  reg (if any) |
+                                    |---------------|
+                                    |   Local var   |
+                                    |    (if any)   |
+                               SP ->|---------------|
+                                    |               |
+
+Using the stack:
+    sp always points to the last used space in the stack
+    to use stack, we decrement this pointer by the amount of space we need and then fill it with info
+
+C:
+    int sumSquare(int x, int y) {
+        return mult(x, x) + y;
+    }
+
+RISC-V:
+        sumSquare:
+  push->    addi sp, sp, -8     # space on stack
+  push->    sw ra, 4(sp)        # save ret addr
+  push->    sw a1, 0(sp)        # save y
+            mv a1, a0           # mult(x, x)
+            jal mult            # call mult
+   pop->    lw a1, 0(sp)        # restore y
+            add a0, a0, a1      # mult() + y
+   pop->    lw ra, 4(sp)        # get ret addr
+   pop->    addi sp, sp, 8      # restore stack
+            jr ra
+
+        mult:
+            ...
+
+Memory Allocation:
+    When a C program is run, there are 3 important memory areas allocated:
+        Static: Variables declared once per program, cease to exist only after execution completes - e.g. C globals
+        Heap: Variables declared dynamically via malloc
+        Stack: Space to be used by procedure during execution; this is where we can save register values
+
+RV32 Memory Layout:
+    Stack starts in high memory and grows down
+        0xbffffff0
+    Programs (text segment) in low end (not very end it's reserved for something else)
+        0x00010000
+    Static data segment (constants and other static variables) above text (above program) for static variables
+        RISC-V convention: gp points to static
+        gp = 0x10000000
+    Heap above static for data structures that grow and shrink; grows up to high addresses
+             _______________
+            |     stack     |
+            |               |
+            |               |
+            |               |
+            | dynamic  data |
+            |---------------|
+            |  static data  |
+            |---------------|
+            |     text      |
+            |               |
+            |---------------|
+            |   reserved    | <- interrupts, system calls, I/O devices, ... (stuff that you don't touch)
+            |_______________|
+
+RV32 so far ...
+    Arithmetic/logic                    Immediate
+        add rd, rs1, rs2                    addi rd, rs1, imm
+        sub rd, rs1, rs2                    subi rd, rs1, imm
+        and rd, rs1, rs2                    andi rd, rs1, imm
+        or rd, rs1, rs2                     ori rd, rs1, imm
+        xor rd, rs1, rs2                    xori rd, rs1, imm
+        sll rd, rs1, rs2                    slli rd, rs1, imm
+        srl rd, rs1, rs2                    srli rd, rs1, imm
+        sra rd, rs1, rs2                    srai rd, rs1, imm
+
+    Branching/jumps                     Load/store
+        beq rs1, rs2, Label                 lw rd, rs1, imm
+        bne rs1, rs2, Label                 lb rd, rs1, imm
+        bge rs1, rs2, Label                 lbu rd, rs1, imm
+        blt rs1, rs2, Label                 sw rs1, rs2, imm
+        bgeu rs1, rs2, Label                sb rs1, rs2, imm
+        bltu rs1, rs2, Label
+        jal rd, Label
+        jalr rd, rs, imm
