@@ -1,0 +1,119 @@
+Logical Instructions (logical operations):
+    and, or, xor, sll (shift left logical), srl (shift right logical)
+    andi, ori, xori, slli, srli
+
+    Always have 2 variants: Register & Immediate
+
+    and x5, x6, x7
+    andi x5, x6, 3
+
+    Used for masking:
+        andi with 0000 00FF isolates the least significant byte
+                  FF00 0000              most
+
+    There is no logical NOT in RISC-V
+        Use xor with 11111111 then the mask is inverted
+
+    Shift Left Logical:
+        slli x11, x12, 2 # shifts left by 2 bit positions (multiply by 4)
+
+    Arithmetic shifting:
+        When working with signed numbers, we generally perform arithmetic shifting
+
+        Shift right arithmetic (sra, srai) moves n bits to the right (insert high-order sign bit into empty bits)
+
+        Example:
+            x10 = 1111 1111 1111 1111 1111 1111 1111 0111 = -25 decimal
+
+            srai x10, x10, 4
+            -> x10 = 1111 1111 1111 1111 1111 1111 1111 0111 = -2 decimal
+            Unfortunately, this is not same as dividing by 2^n
+                Fails for odd negative numbers
+                C arithmetic semantics is that division should round towards 0
+
+Assembler to machine code:
+    1. We have two assembler source files (text) foo.S and bar.S
+    2. "Assembler" converts human-readable assembly code to instruction bit patterns -> foo.o and bar.o
+        Assembler produces machine code object files
+    3. Linker takes our object files and other library object files and link them together
+        - places the addresses in appropriate spaces and put everything together such that it looks like one piece of a program
+        foo.o + bar.o + lib.o -> a.out
+        a.out is a machine code executable file
+        a.out is not small enough to fit in the registers, so it will live in the memory
+
+    In the processor, inside the datapath there is a special register called "Program Counter".
+        PC is internal to the processor and holds the byte address of the next instruction that is going to be executed
+
+        The "Control Unit" uses the PC to fetch the instruction from memory and execute it using datapath and memory system,
+        and updates PC (default add +4 bytes to PC, to move to next sequential instruction; branches, jumps alter)
+
+Helpful RISC-V Assembler Features:
+    - Symbolic register names
+        Some registers will have special purposes, it's helpful to give them symbolic names
+        Examples:
+            a0-a7 for argument registers (x10-x17) for function calls
+            zero for x0
+
+    - Pseudo-instructions
+        Shorthand syntax for common assembly idioms
+        Examples:
+            addi rd, rs, 0 = mv rd, rs
+            addi rd, x0, 13 = li rd, 13 # load immediate
+            addi x0, x0, 0 = nop
+
+RISC-V Function Calls:
+    6 fundamental steps in calling a function:
+        1. Put arguments in a place where function can access them
+        2. Transfer control to function
+        3. Acquire (local) storage resources needed for function
+        4. Perform desired task of the function
+        5. Put return value in a place where calling code can access it and restore any registers you need; release local storage
+        6. Return control to point of origin, since a function can be called from several points in a program
+
+    RISC-V Function Call Conventions:
+        Register faster than memory, so use them
+        a0-a7 (x10-x17): 8 argument registers to pass parameters and two return values (a0-a1)
+        ra: one return address register to return to the point of origin (x1)
+        Also s0-s1 (x8-x9) and s2-s11(x18-x27): saved registers
+
+    Example C code:
+        ...
+        sum(a, b);
+        ...
+
+        int sum(int x, int y) {
+            return x + y;
+        }
+
+    Assembly:
+        1000 mv a0, s0              # x = a
+        1004 mv a1, s1              # y = b
+        1008 addi ra, zero, 1016    # ra = 1016
+        1012 j sum
+        1016 ...
+        ...  ...
+        2000 sum: add a0, a0, a1
+        2004 jr ra
+
+    jr: "Jump Register"
+        We don't use use j because jump requires us to code up the address value
+
+        sum might be called by many places, so we can't return to a fixed place. The calling proc to sum must be able to say
+        "return here" somehow -> better use a variable
+
+    Single instruction to jump and save return address: "Jump and Link" (jal)
+        Before: addi ra, zero, 1016
+                j sum
+
+        After:  jal sum
+
+        Why have a jal?
+            Make the common case fast: function calls very common
+            Reduce program size
+            Don't have to know where code is in memory with jal
+
+        It should be called laj, because it links then jumps
+            "link" means form an address or link that points to calling site to allow function to return to proper address
+            Jumps to address and simultaneously saves the address of the following instruction in register ra
+
+    Assembler shorthand for jr ra -> ret
