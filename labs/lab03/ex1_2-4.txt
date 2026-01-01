@@ -1,0 +1,11 @@
+2. Run the program to completion. What number did the program output? What does this number represent?
+    34, the 9th Fibonacci number
+
+3. At what address is n stored in memory? Hint: Look at the contents of the registers.
+    0x10000010
+
+4. Without actually editing the code (i.e. without going into the “Editor” tab), have the program calculate the 13th fib number
+(0-indexed) by manually modifying the value of a register.
+You may find it helpful to first step through the code.
+If you prefer to look at decimal values, change the “Display Settings” option at the bottom.
+

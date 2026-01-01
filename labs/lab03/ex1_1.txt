@@ -1,0 +1,59 @@
+1. What do the .data, .word, .text directives mean (i.e. what do you use them for)? Hint: think about the 4 sections of memory.
+
+These are assembler directives. They do not generate instructions, they tell the assembler where and how to place things in memory.
+Assembler directives are instructions to the assembler, not to the CPU.
+They tell the assembler how to build the program in memory, rather than telling the processor what to execute at runtime.
+Assembler directives control layout, data, and metadata at assembly time; they do not execute.
+
+What assembler directives do:
+    Assembler directives can tell the assembler to:
+        Choose which memory section to use
+        Allocate memory
+        Initialize data
+        Define constants
+        Align data in memory
+        Declare labels and symbols
+    All of this happens before the program runs.
+
+.data
+    Corresponds to data segment
+
+    Switches the assembler to the data segment
+    Used to store static/global data
+    Memory here is:
+        Allocated before the program runs
+        Has a fixed address
+        Typically read/write
+.word
+    Allocates one or more 32-bit (4-byte) words
+    Stores the given values in memory
+    Used for:
+        Integers
+        Arrays
+        Constants
+.text
+    Corresponds to text (code) segment
+
+    Switches the assembler to the text segment
+    Used for executable instructions
+    Memory here is:
+        Typically read-only
+        Executed by the CPU
+    All instructions after .text go into the instruction memory.
+
+.data               <- switch to data segment
+.word 2, 4, 6, 8    <- Creates 4 consecutive words in memory
+n: .word 9          <- n is a label pointing to an address in the data segment. That address stores the integer 9
+. text              <- switch to text (code) segment
+
+Putting it all together (mapping to memory)
+    | Directive | Memory Section | Purpose                             |
+    | --------- | -------------- | ----------------------------------- |
+    |  .data    | Data segment   | Static variables, constants         |
+    |  .word    | Data segment   | Allocate & initialize 32-bit values |
+    |  .text    | Text segment   | Program instructions                |
+
+One-sentence summary
+    .data selects the data segment for static variables,
+    .word allocates 32-bit values in that segment,
+    and .text selects the text segment where executable instructions are stored.

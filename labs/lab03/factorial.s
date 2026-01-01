@@ -21,4 +21,11 @@ main:
     ecall # Exit
 
 factorial:
-    # YOUR CODE HERE
+    addi t2, x0, 1      # break condition: var == 1
+    add t0, x0, a0      # var = n - 1
+    sub t0, t0, t2
+loop:
+    mul a0, a0, t0      # res *= var
+    sub t0, t0, t2      # var--
+    bne t0, t2, loop    # var != 1
+    ret
