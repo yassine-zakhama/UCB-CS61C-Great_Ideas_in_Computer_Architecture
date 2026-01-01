@@ -1,0 +1,37 @@
+B-Format:
+    Recall: Instructions stored in a localized area of memory (Code/Text)
+        Largest branch distance limited by size of code
+        Address of current instruction stored in the program counter (PC)
+
+    PC-Relative Addressing
+        Use the immediate field as a 2's-complement offset to PC
+            Branches generally change the PC by a small amount
+            Can specify +/- 2^11 "unit" addresses from the PC (not 2^12 because we want to go forwards and backwards)
+                These 12 bits are the 5 bits of the destination register that we don't need + 7 bits of the funct7 field
+        Why not use byte as a unit of offset from PC?
+            Because instructions are 32-bits
+            We don't want to branch into middle of instruction -> we have to always branch to the start of a word
+
+        One idea: to improve the reach of a single branch instruction, multiply the offset by four bytes before adding to PC
+        This would allow one branch instruction to reach +/-2^11 x 32-bit instructions either side of PC
+            -> 4x greater reach than using byte offset
+        Branch calculation:
+            If we don't take the branch:
+                PC = PC + 4 (i.e. next instruction)
+            If we do take the branch:
+                PC = PC + immediate*4
+        But this is not what RISC-V does
+
+    RISC-V Feature, n x 16-bit instructions
+        - Extensions to RISC-V base ISA support 16-bit compressed instructions and also variable-length instructions that are multiples of 16-bits
+        in length
+        - To enable this, RISC-V scales the branch offset by 2 bytes even when there are no 16-bit instructions
+        - Reduces branch reach by half and means that ½ of possible targets will be errors on RISC-V processors that only support 32-bit instructions
+        (as used in this class)
+        RISC-V conditional branches can only reach ± 2^10 × 32-bit instructions on either side of PC
+
+        Actual RISC-V Branch calculation:
+            If we don't take the branch:
+                PC = PC + 4 (i.e. next instruction)
+            If we do take the branch:
+                PC = PC + immediate*2
