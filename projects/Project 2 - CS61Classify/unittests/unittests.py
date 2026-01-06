@@ -307,16 +307,22 @@ class TestMatmul(TestCase):
         array_out = t.array([0] * len(result))
 
         # load address of input matrices and set their dimensions
-        raise NotImplementedError("TODO")
-        # TODO
+        t.input_array("a0", array0)
+        t.input_scalar("a1", m0_rows)
+        t.input_scalar("a2", m0_cols)
+
+        t.input_array("a3", array1)
+        t.input_scalar("a4", m1_rows)
+        t.input_scalar("a5", m1_cols)
+
         # load address of output array
-        # TODO
+        t.input_array("a6", array_out)
 
         # call the matmul function
         t.call("matmul")
 
         # check the content of the output array
-        # TODO
+        t.check_array(array_out, result)
 
         # generate the assembly file and run it through venus, we expect the simulation to exit with code `code`
         t.execute(code=code)
@@ -326,6 +332,55 @@ class TestMatmul(TestCase):
             [1, 2, 3, 4, 5, 6, 7, 8, 9], 3, 3,
             [1, 2, 3, 4, 5, 6, 7, 8, 9], 3, 3,
             [30, 36, 42, 66, 81, 96, 102, 126, 150]
+        )
+
+    def test_different_size(self):
+        self.do_matmul(
+            [1, 2, 3, 4, 5, 6], 2, 3,
+            [7, 8, 9, 10, 11, 12], 3, 2,
+            [58, 64, 139, 154]
+        )
+
+    def test_large_first_matrix(self):
+        self.do_matmul(
+            [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], 3, 4,
+            [2, 0, 1, 3, 0, 1, 4, 2], 4, 2,
+            [20, 17, 48, 41, 76, 65]
+        )
+
+    def test_invalid_m0_rows(self):
+        self.do_matmul(
+            [1], 0, 3,
+            [1], -1, 3,
+            [1], 72
+        )
+
+    def test_invalid_m0_cols(self):
+        self.do_matmul(
+            [1], 3, -1,
+            [1], -1, 3,
+            [1], 72
+        )
+
+    def test_invalid_m1_rows(self):
+        self.do_matmul(
+            [1], 3, 3,
+            [1], 0, 3,
+            [1], 73
+        )
+
+    def test_invalid_m1_cols(self):
+        self.do_matmul(
+            [1], 3, 3,
+            [1], 3, -1,
+            [1], 73
+        )
+
+    def test_dimensions_match(self):
+        self.do_matmul(
+            [1], 3, 2,
+            [1], 3, 3,
+            [1], 74
         )
 
     @classmethod
