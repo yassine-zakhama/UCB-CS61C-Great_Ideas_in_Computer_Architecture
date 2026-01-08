@@ -1,0 +1,54 @@
+n-input XOR is not so obvious ...
+... it's actually simple
+    -> XOR is a 1 iff the # of 1s at its input is odd
+
+Boolean Algebra
+    . means AND (a.b == ab)
+    + means OR
+    _
+    x means NOT
+
+
+    a.b == b.a
+    a+b == b+a
+
+    Circuit & Algebraic Simplification
+        y = ab + a + c
+          = a(b + 1) + c
+          = a(1) + c
+          = a + c
+
+        We would much rather have the simplified version
+            => fewer transistors to use
+            => lower delay
+            => less area on the chip
+
+    BA is also great for circuit verification; Circ X == Circ Y ?? Use BA to prove!
+        Simplify both circuits to the simplest form and see if they end up the same
+
+Laws of BA
+                              _                      _
+    Complementarity         x.x = 0              x + x = 1
+    laws of 0's and 1's     x.0 = 0              x + 0 = x
+    identities              x.1 = x              x + 1 = 1
+    idempotent laws         x.x = x              x + x = x
+    communitive law         x.y = y.x            x + y = y + x
+    associativity         (xy)z = x(yz)    (x + y) + z = x + (y + z)
+    distribution       x(y + z) = xy + xz       x + yz = (x + y).(x + z)
+    uniting theorem      xy + x = x           (x + y)x = x
+                            ___   _   _            ___   _ _
+    DeMorgan's law          x.y = x + y            x+y = x.y
+
+Canonical Forms
+    -> When is it one?
+
+    abc | y
+    ----|---                       _ _ _   _ _       _ _       _
+    000 | 1     => Canonical form: a.b.c + a.b.c + a.b.c + a.b.c
+    001 | 1                                     __    _
+    010 | 0               Then simplify =>   == ab + ac
+    011 | 0
+    100 | 1
+    101 | 0
+    110 | 1
+    111 | 0
