@@ -1,4 +1,4 @@
-# CS61Classify – Project 2
+# CS61Classify
 
 ## Overview
 
