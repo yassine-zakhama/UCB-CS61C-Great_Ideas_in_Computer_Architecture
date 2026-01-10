@@ -1,0 +1,73 @@
+Data Multiplexers ("mux")
+    E.g. 2-to-1, n-bit wide
+        You can think of it of n instances of 1-bit wide mux
+                   _
+            -> c = sa + sb      s | c
+                                --|--
+                                0 | a
+                                1 | b
+
+    4-to-1 mux?
+        has 6 inputs (a, b, c, d, s0, s1) -> truth table has 64 rows -> too many numbers
+
+        We can go straight to the answer:
+            s=00, e=a              __ __        __     __
+            s=10, e=b       -> e = s1.s0.a + s1.s0.b + s1.s0.c + s1.s0.d
+            s=01, e=c
+            s=11, e=d
+
+        Another way is to do it hierarchically
+            s0 and s1 are wiring together 3 2-to-1 muxes
+            s0 controls who wins from the 4 inputs, s1 controls who wins from the last 2 winners
+
+ALU
+    Most processors contain a special logic block called “Arithmetic and Logic Unit” (ALU)
+
+    E.g., it can do ADD, SUB, bitwise AND (&), bitwise OR (|)
+        when S=00, R=A+B
+        when S=01, R=A-B
+        when S=10, R=A&B
+        when S=11, R=A|B
+            It can be extended to support other operations (sll, ...)
+
+Adder/Subtractor Design, how?
+    Option 1: Truth-table, then determine canonical form, then minimize and implement as we’ve seen before
+    Option 2: Look at breaking the problem down into smaller pieces that we can cascade or hierarchically layer
+
+    One-bit adder LSB:
+
+              c1
+        a3 a2 a1 a0
+        b3 b2 b1 b0     s0 = a0 XOR b0
+        -----------     c1 = a0 AND b0
+        s3 s2 s1 s0
+
+        Rest of bits:
+              Si = XOR(Ai, Bi, Ci)
+            Ci+1 = MAJ(Ai, Bi, Ci) = Ai.Bi + Ai.Ci + Bi.Ci
+
+    1-bit adder to n-bit adder:
+        -> cascade them: n 1-bit adders, and carry i-1 is fed to adder i
+
+        What about overflow?
+            For 2 unsigned numbers, Cn is the overflow
+
+            Pattern:
+                Cin = Carry-in = c1, Cout = Carry-out = c2
+                No Cout or Cin à NO overflow!
+                Cin and Cout à NO overflow!
+                Cin, but no Cout à A,B both > 0, overflow!
+                Cout, but no Cin à A or B are -2, overflow!
+
+                -> overflow = Cn XOR Cn-1
+
+    Subtractor Design
+        Extremely clever: A-B = A + (-B)
+
+        XOR serves as conditional inverter!
+            x = 0 -> XOR(x,y) = y
+                                _
+            x = 1 -> XOR(x,y) = y
+
+        How do you negate a 2's complement number?
+            -> invert bits and add 1
