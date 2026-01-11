@@ -1,0 +1,72 @@
+Other components that pretty much every computer needs to have:
+    Control and status registers (CSRs) are separate from the (general purpose) register file (x0-x31)
+        Used for monitoring the status and performance
+        There can be up to 4096 CSRs (in RISC-V)
+    Not in the base ISA, but almost mandatory in every implementation
+        ISA is modular
+            CSRs used to be part of the ISA, but they have been taken out for modularity reasons
+            There is a standard extension that covers these CSRs in RISC-V
+        Necessary for counters and timers, and communication with peripherals
+            This communication is often done by placing a control word, that the peripheral unit is supposed to pick up and do something with it,
+            in a register. And when it's done, it will put its status in there (ready, waiting, or done). In some cases that communication is a
+            single bit aka "flag"
+
+CSR Instructions:
+    They share the I-format
+
+    2 types:
+    - ones that have a source register
+    - others use an immediate
+
+    They way they work is:
+        They generally work with the general purpose registers
+        We will be swapping the values the values of CSRs with the values in the general purpose registers
+        Ex: csrrw copies what's in a particular CSR that we are addressing and stores it in a destination register,
+            and concurrently takes the value from the source register rs1 and copies it into the CSR
+
+System Instructions:
+    ecall – (I-format) makes requests to supporting execution environment (OS), such as system calls (syscalls)
+    ebreak – (I-format) used e.g. by debuggers to transfer control to a debugging environment
+    fence – sequences memory (and I/O) accesses as viewed by other threads or co-processors
+
+Role of the control unit: setup muxes and other configuration options inside the datapath to execute different instructions
+
+Instruction timing:
+    The longest time it takes to execute an instruction should be smaller then the clock frequency
+
+    Example:
+        IF      ID      EX      MEM       WB        Total
+        I-MEM   Reg     Read    ALU       D-MEM     Reg W
+        200 ps  100 ps  200 ps  200 ps    100 ps    800 ps
+
+        lw is the longest instruction, as it goes through all 5 stages
+        -> Maximum clock frequency: fmax = 1/800ps = 1.25 GHz
+
+        Most blocks idle most of the time
+            E.g. fmax,ALU = 1/200ps = 5 GHz!
+
+Control Logic: Can be viewed as a truth table
+
+Control Realization Options:
+    - ROM (Read-Only Memory)
+        Regular structure
+        Can be easily reprogrammed
+            fix errors
+            add instructions
+        Popular when designing control logic manually
+    - Combinatorial Logic
+        Today, chip designers use logic synthesis tools to convert truth tables to networks of gates
+        More compact and faster
+
+    RV32I, a 9-bit ISA! We only need 9 bits from the 32-bit instruction:
+        Instruction type encoded using only 9 bits: inst[30], inst[14:12], inst[6:2]
+
+    ROM-based control:
+        Input: 9-bit + 2 bits (BrEq & BrLt)
+        Output 15 bits
+
+        Implementation:
+            11 bits input -> address decoder (e.g. add) -> rom (e.g. control word for add) -> controller output
+
+Now we have a fully functional processor that we can compile any C program to. But it is not performant and has a very long critical path
+From here to the rest of the course, we will be improving the design and adding some features
