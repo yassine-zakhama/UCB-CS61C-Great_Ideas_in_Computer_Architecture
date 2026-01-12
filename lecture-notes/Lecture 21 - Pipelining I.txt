@@ -1,0 +1,69 @@
+Parallel Instructions:
+    > 1 instruction @ one time
+    e.g. 5 pipelined Instructions
+
+Reminder the longest instruction (lw) takes 800ps to finish
+    -> fmax = 1/800px = 1.25 GHz
+    If we clock the processor faster it will not be able to execute lw in time, other instructions will finish in time
+
+    -> Our single-cycle RISC-V CPU executes instructions at 1.25 GHz
+        1 instruction every 800ps
+
+Can we improve its performance?
+    What do we mean with this statement?
+    Not so obvious:
+        Quicker response time, so one job finishes faster?
+        More jobs per unit time (e.g. web server returning pages, spoken words recognized)?
+        Longer battery life? (how much energy does it consume?)
+            Energy is very important for mobile devices, and high performance servers that live in warehouse computers in data centers
+            The cost of running a datacenter is essentially the cost of energy, it overshadows the hardware cost after about 1, 1.5 years after deployment
+
+Note: Power is not a good measure, since low-power CPU might run for a long time to complete one task consuming more energy than faster computer running at higher power for a shorter time
+    -> we care about energy not power
+
+"Iron Law" of processor performance:
+    CPI = Cycles per Instruction
+
+    time/program = instructions/program * cycles/instruction * time/cycle
+
+    Instructions per Program:
+        Determined by
+        - Task
+        - Algorithm, e.g. O(N2) vs O(N)
+        - Programming language
+        - Compiler
+        - Instruction Set Architecture (ISA)
+
+    (Average) Clock Cycles per Instruction (CPI)
+        Determined by
+        - ISA
+        - Processor implementation (or microarchitecture)
+        - E.g. for “our” single-cycle RISC-V design, CPI = 1
+        - Complex instructions (e.g. strcpy), CPI >> 1
+        - Superscalar processors, CPI < 1 (next lectures)
+
+    Time per Cycle (1/Frequency)
+        Determined by
+        - Processor microarchitecture (determines critical path through logic gates)
+        - Technology (e.g. 5nm versus 28nm)
+        - Power budget (lower voltages reduce transistor speed)
+
+Energy “Iron Law”
+    performance (tasks/s) = power (joules/s) * energy efficiency
+
+    Energy efficiency (e.g., instructions/Joule) is key metric in all computing devices
+    For power-constrained systems (e.g., 20MW datacenter), need better energy efficiency to get more performance at same power
+    For energy-constrained systems (e.g., 1W phone), need better energy efficiency to prolong battery life
+
+Intro to pipelining
+    Pipelining increases compute throughput
+
+    Currently we are executing instructions sequentially (single cycle CPU)
+
+    Pipelining doesn’t help latency of single task, it helps throughput of entire workload
+    Multiple tasks operating simultaneously using different resources
+    Potential speedup = Number of pipe stages
+    Time to “fill” pipeline and time to “drain” it reduces speedup: 2.3X v. 4X in this example
+
+    Pipeline rate limited by slowest pipeline stage
+    Unbalanced lengths of pipe stages reduce speedup
