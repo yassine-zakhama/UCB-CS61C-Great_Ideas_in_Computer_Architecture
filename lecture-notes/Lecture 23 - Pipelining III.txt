@@ -1,0 +1,109 @@
+Load Data Hazard
+    lw s2,20(s1)        # s2 is valid after the whole instruction is done
+    or s8,s2,s6         # with no stalling s2 here is invalid; it has the old value
+    add s9,s4,s2
+    and s4,s2,s5
+    slt s1,s6,s7
+
+    Solution: 1-cycle stall is unavoidable, we cannot go back in time, repeat instruction + forwarding
+
+    All load instructions require 1-cycle pipeline stall
+        stall by convention in RISC-V: addi x0, x0, 0
+
+    Problem: after we recognize that the instruction is a load instruction, the following instruction has already been fetched. We have to have a hardware
+             mechanism that cancels the following instruction and repeats it in the next cycle
+    If the following does not write back, we have no problem! -> all we need to do is to immediately turn off the all the control signals that are associated
+    with writing the new state into the processor (no writing to regfile and memory, and we are not updating the PC)
+
+Slot after a load is called a load delay slot
+    If that instruction uses the result of the load, then the hardware will stall for one cycle
+        Equivalent to inserting an explicit nop in the slot
+        except the latter uses more code space
+        Performance loss
+    Idea:
+        Put unrelated instruction into load delay slot
+        No performance loss!
+
+    -> Compiler's job
+
+Code Scheduling to Avoid Stalls
+    Reorder code to avoid use of load result in the next instr!
+    RISC-V code for A[3]=A[0]+A[1]; A[4]=A[0]+A[2]
+
+    Original Order:
+        lw t1, 0(t0)
+        lw t2, 4(t0)
+        add t3, t1, t2
+        sw t3, 12(t0)
+        lw t4, 8(t0)
+        add t5, t1, t4
+        sw t5, 16(t0)
+
+        -> 9 cycles
+
+    Alternative:
+        lw t1, 0(t0)
+        lw t2, 4(t0)
+        lw t4, 8(t0)
+        add t3, t1, t2
+        sw t3, 12(t0)
+        add t5, t1, t4
+        sw t5, 16(t0)
+
+        -> 7 cycles
+
+Control Hazard (jumps and branches)
+    beq t0,t1,Label
+    or t6,s0,t3         # Executed regardless of branch outcome!
+    xor t5,t1,s0        # Executed regardless of branch outcome!
+    sub t2,s0,t0        # PC updated
+    sw s0,8(t3)
+
+    we have to stall 2 cycles after a branch?
+
+    Observation:
+        If branch not taken, then instructions fetched sequentially after branch are correct
+        If branch or jump taken, then need to flush incorrect instructions from pipeline by converting to NOPs
+
+    Kill Instructions after Branch if Taken
+        the same way as we did with loads, turn off writes that change the state of the processor
+
+    Reducing branch penalties:
+        Every taken branch in simple pipeline costs 2 dead cycles
+        To improve performance, use “branch prediction” to guess which way branch will go earlier in pipeline
+            Ex: We generally use branches for looping, if i == 100 then the branch is taken only once. 99 times not
+                -> if we can predict this correctly we can reduce the penalty to 1%
+            There a various predictors, the simplest one is 1-bit predictor; if it was taken last time then it is likely to be taken this time too
+        Only flush pipeline if branch prediction was incorrect
+
+Increasing Processor Performance
+    1. Clock rate
+        Limited by technology (how fast transistors can switch) and power dissipation (cooling the processor)
+    2. Pipelining
+        “Overlap” instruction execution
+        Deeper pipeline: 5 => 10 => 15 stages
+            Less work per stage (less logic depth, go throw less logic gates) -> shorter clock cycle
+            But more potential for hazards (CPI > 1)
+    3. Multi-issue "superscalar" processor
+
+Superscalar Processors
+    Multiple issue “superscalar”
+        Replicate pipeline stages ⇒ multiple pipelines
+        Start multiple instructions per clock cycle
+        CPI < 1, so use Instructions Per Cycle (IPC)
+        E.g., 4GHz 4-way multiple-issue
+            16 BIPS, peak CPI = 0.25, peak IPC = 4
+        Dependencies reduce this in practice
+    “Out-of-Order” execution
+        Reorder instructions dynamically in hardware to reduce impact of hazards
+
+RISC-V ISA designed for pipelining
+    All instructions are 32-bits
+        Easy to fetch and decode in one cycle
+        Versus x86: 1- to 15-byte instructions
+    Few and regular instruction formats
+        Decode and read registers in one step
+    Load/store addressing
+        Calculate address in 3rd stage, access memory in 4th stage
+    Alignment of memory operands
+        Memory access takes only one cycle
