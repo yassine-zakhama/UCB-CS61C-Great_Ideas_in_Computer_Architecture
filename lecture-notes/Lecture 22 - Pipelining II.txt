@@ -1,0 +1,111 @@
+Single-cycle CPUs are inefficient
+
+Pipelined RISC-V Datapath
+       clk   clk   clk   clk   clk   ...
+    IF -> ID -> EX -> MA -> WB
+          IF -> ID -> EX -> MA -> WB
+                IF -> ID -> EX -> MA -> WB
+                      IF -> ID -> EX -> MA -> WB
+                            IF -> ID -> EX -> MA -> WB
+
+    clk is now 1/5, but an instruction takes longer (5 x 200ps (longest stage) = 1000ps), but we can do dramatically more instructions /s
+        f = 5 Ghz -> 4x speed up
+
+    Resource use (IMEM -> Reg -> ALU -> DMEM -> Reg) of instruction over time: sequential
+    Resource use in a particular time slot: parallel
+
+Pipelining datapath
+    Reminder: Memory read and register access are treated as combinational logic operations: they do not rely on clocks; as soon as data is stable at the output,
+              we assume that that operation has finished
+
+    How do we pipeline? we simply insert registers after each stage
+
+Pipelined Control
+    Control signals derived from instruction
+        As in single-cycle implementation
+        Information is stored in pipeline registers for use by later stages
+
+Pipeline hazards
+    Stands for a collection of issues that pipelined processors encounter
+
+    In single-cycle processors there are no dependencies between instructions, in pipelined processors: multiple simultaneously, if the results of one instruction affect the following instruction
+    then we have an issue: the following cannot proceed
+
+    A hazard is a situation that prevents starting the next instruction in the next clock cycle
+    1. Structural hazard
+        A required resource is busy (e.g. needed in multiple stages)
+    2. Data hazard
+        Data dependency between instructions
+        Need to wait for previous instruction to complete its data read/write
+    3. Control hazard
+        Flow of execution depends on previous instruction
+
+Structural hazard
+    Problem: Two or more instructions in the pipeline compete for access to a single physical resource
+
+    Solution 1: Instructions take it in turns to use resource, some instructions have to stall (stall == introduce nop)
+    Solution 2: Add more hardware to machine
+    Can always solve a structural hazard by adding more hardware. E.g. dedicated adder to add 4 to PC to avoid using the ALU
+
+    Summary:
+        Conflict for use of a resource (ex. )
+        In RISC-V pipeline with a single memory
+            Load/store requires data access
+            Without separate memories, instruction fetch would have to stall for that cycle
+                All other operations in pipeline would have to wait
+        Pipelined datapaths require separate instruction/data memories
+            Or separate instruction/data caches
+        RISC ISAs (including RISC-V) designed to avoid structural hazards
+            e.g. at most one memory access/instruction
+
+Data hazard
+    Ex 1: Register access
+        add t0, t1, t2
+        slt t6, t0, t3
+        sw t0, 4(t3)
+        or t3, t4, t5
+        addi t0, t1, t2
+
+        Separate ports, but what if write to same register as read?
+        Does sw in the example fetch the old or new value?
+
+        Regfiles are designed to support single cycle read/write operations
+            Exploit high speed of register file (100 ps)
+                1. WB updates value
+                2. ID reads new value
+            Might not always be possible to write then read in same cycle, especially in high-frequency designs.
+
+    Ex 2: ALU result
+        add s0,t0,t1    # false value of s0?
+        or t6,s0,t3     # false value of s0?
+        xor t5,t1,s0    # false value of s0?
+        sub t2,s0,t0
+        sw s0,8(t3)
+
+        all instructions depend on add s0 completing and writing back to regfile
+        Without some fix, sub and or will calculate wrong result!
+
+        Solution 1: Stalling
+            -> nop: Affected pipeline stages do “nothing”
+
+            Stalls reduce performance
+                But stalls are required to get correct results
+            Compiler can arrange code or insert nops (addi x0, x0, 0) to avoid hazards and stalls
+                Requires knowledge of the pipeline struct
+
+        Solution 2: Forwarding, aka bypassing (hardware solution: muxes)
+            Forwarding: grab operand from pipeline stage, rather than register file
+                When add is at the end of the execute phase, we have the correct value at the ALU output, but not in the regfile; we can forward it where it is needed
+            Use result when it is computed
+                Don’t wait for it to be stored in a register
+                Requires extra connections in the datapath
+
+            Data Needed for Forwarding (Example)
+                add t0, t0, t1
+                sub t3, t0, t5
+                sub t6, t0, t3
+
+                Compare destination of older instructions in pipeline with sources of new instruction in decode stage.
+                Must ignore writes to x0!
+
+            We also need forwarding control logic
