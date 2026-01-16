@@ -1,0 +1,151 @@
+Direct-Mapped Cache
+    The simplest cache
+
+    In a direct-mapped cache, each memory address is associated with one possible "block" (amount of data that moves in and out of cache; e.g. if we are talking about harddrives we are talking
+    about files, if it's a register -> word => a block is a unit of transfer) within the cache => position is always defined => no searching
+        Therefore, we only need to look in a single location in the cache for the data if it exists in the cache
+        Block is the unit of transfer between cache and memory
+
+    How does it know which memory block it originated from?
+        -> we need a tag
+
+        We use the cache number:
+            e.g. if cache is 8 byte big, then all bytes in memory from 0 to 7 have cache number 0, 8 to 15: cache number 1, and so on
+
+        Its useful to draw memory with same width as the block size:
+            Ex: 8 byte direct mapped cache with block size 2:
+
+                  Memory                         Cache
+                 ___ ___  _______               ___ ___
+              0 |___|___|                      |___|___|
+                |___|___|  cache #0            |___|___|
+                |___|___|                      |___|___|
+              6 |___|___| _______              |___|___|
+              8 |___|___|
+                |___|___|  cache #1
+                |___|___|
+              E |___|___| _______
+             10 |___|___|
+                |___|___|  cache #2
+                |___|___|
+             16 |___|___| _______
+             18 |___|___|
+                |___|___|  cache #3
+                |___|___|
+             1E |___|___| _______
+
+    Issues with Direct-Mapped
+        Since multiple memory addresses map to same cache index, how do we tell which one is in there?
+        What if we have a block size > 1 byte?
+        Answer: divide memory address into three fields
+
+            ttttttttttttttttt | iiiiiiiiii | oooo
+              tag to check if   index to      byte offset within block
+              correct block     select block
+
+        Terminology:
+            All fields are read as unsigned integers.
+            - Index
+                specifies the cache index (which “row”/block of the cache we should look in)
+            - Offset
+                once we’ve found correct block, specifies which byte within the block we want
+            - Tag
+                the remaining bits after offset and index are determined; these are used to distinguish between all the memory addresses that map to the same location
+
+    Area (cache size, B) = HEIGHT (# of blocks) * WIDTH (size of one block, B/block)
+        = 2
+
+Memory Access without Cache
+    Load word instruction: lw t0, 0(t1)
+    t1 contains 1022ten , Memory[1022] = 99
+
+    1. Processor issues address 1022ten to Memory
+    2. Memory reads word at address 1022ten (99)
+    3. Memory sends 99 to Processor
+    4. Processor loads 99 into register t0
+
+Memory Access with Cache
+    Load word instruction: lw t0, 0(t1)
+    t1 contains 1022ten , Memory[1022] = 99
+    With cache (similar to a hash)
+        1. Processor issues address 1022ten to Cache
+        2. Cache checks to see if has copy of data at address 1022ten
+            2a. If finds a match (Hit): cache reads 99, sends to processor
+            2b. No match (Miss): cache sends address 1022 to Memory
+                I. Memory reads 99 at address 1022ten
+                II. Memory sends 99 to Cache
+                III. Cache replaces word with new 99
+                IV. Cache sends 99 to processor
+        3. Processor loads 99 into register t0
+
+Cache Terminology
+    When reading memory, 3 things can happen:
+    - cache hit:
+        cache block is valid and contains proper address, so read desired word
+    - cache miss:
+        nothing in cache in appropriate block, so fetch from memory
+    - cache miss, block replacement:
+        wrong data is in cache at appropriate block, so discard it and fetch desired data from memory (cache always copy)
+
+Cache Temperature (informal!)
+    - Cold
+        Cache empty
+    - Warming
+        Cache filling with values you’ll hopefully be accessing again soon
+    - Warm
+        Cache is doing its job, fair % of hits
+    - Hot
+        Cache is doing very well, high % of hits
+
+Cache Terms:
+    Hit rate: fraction of access that hit in the cache
+    Miss rate: 1 – Hit rate
+    Miss penalty: time to replace a block from lower level in memory hierarchy to cache
+    Hit time: time to access cache memory (including tag comparison)
+
+One More Detail: Valid Bit
+    When start a new program, cache does not have valid information for this program
+    Need an indicator whether this tag entry is valid for this program
+    Add a “valid bit” to the cache tag entry
+        0 -> cache miss, even if by chance, address = tag
+        1 -> cache hit, if processor address = tag
+
+
+Example:
+    Given
+        Cache size = 16 KB = 16 × 1024 = 16384 bytes
+        Block size = 16 B
+        Address size = usually 32 bits (RV32I)
+
+    Offset bits:
+        Offset selects a byte within a block
+            Offset bits = log(block size) = log(16) = 4
+    Number of blocks:
+        16384 / 16 = 1024 blocks
+    Index bits (depends on associativity)
+        Case Direct mapped:
+            Each block = one set
+                index bits = log(1024) = 10
+    Tag bits
+        whatever is left over:
+            tag = address bits - (index + offset)
+        case direct mapped:
+            32 - (10 + 4) = 18
+
+Offset:
+    Which byte inside a cache block
+        A cache block holds multiple bytes
+        The offset bits choose exactly which byte you want
+
+    Example:
+        Block size = 16 bytes
+            -> block: [ byte0 byte1 byte2 ... byte15 ]
+        Needed: log(16) = 4 bits
+        offset = 0000 -> byte 0
+        offset = 1111 -> byte 15
+
+Index:
+    What it selects:
+        Which cache set (or line)
+            The cache has many blocks
+            The index bits decide which set to look in
